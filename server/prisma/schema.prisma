@@ -1,0 +1,133 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  password     String
+  name         String?
+  avatarUrl    String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  documents    Document[]
+  chatSessions ChatSession[]
+  apiKeys      ApiKey[]
+}
+
+model Document {
+  id           String         @id @default(uuid())
+  name         String
+  path         String         // Local path or S3 URL
+  size         Int
+  mimeType     String
+  status       String         // UPLOADING, PROCESSING, EMBEDDING, GENERATING_APIS, COMPLETED, FAILED
+  error        String?
+  summary      String?
+  tags         String?        // Comma-separated tags
+  userId       String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chunks       DocumentChunk[]
+  faqs         FAQ[]
+  apiEndpoints ApiEndpoint[]
+  concepts     Concept[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model DocumentChunk {
+  id         String   @id @default(uuid())
+  content    String
+  tokenCount Int?
+  vectorId   String?  // Reference key in vector database (or in-memory store)
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model Concept {
+  id               String               @id @default(uuid())
+  name             String
+  description      String?
+  documentId       String
+  document         Document             @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  relationshipsFrom ConceptRelationship[] @relation("ConceptFrom")
+  relationshipsTo   ConceptRelationship[] @relation("ConceptTo")
+  createdAt        DateTime             @default(now())
+}
+
+model ConceptRelationship {
+  id     String  @id @default(uuid())
+  fromId String
+  from   Concept @relation("ConceptFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  toId   String
+  to     Concept @relation("ConceptTo", fields: [toId], references: [id], onDelete: Cascade)
+  type   String  // "parent-child", "related"
+}
+
+model FAQ {
+  id         String   @id @default(uuid())
+  question   String
+  answer     String
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model ApiEndpoint {
+  id             String   @id @default(uuid())
+  path           String   // e.g., "/react/hooks"
+  method         String   // "GET", "POST"
+  description    String
+  responseSchema String   // JSON string of schema
+  documentId     String
+  document       Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  logs           ApiLog[]
+  createdAt      DateTime @default(now())
+}
+
+model ApiLog {
+  id         String      @id @default(uuid())
+  endpointId String
+  endpoint   ApiEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  path       String
+  method     String
+  ipAddress  String?
+  statusCode Int
+  latencyMs  Int
+  createdAt  DateTime    @default(now())
+}
+
+model ChatSession {
+  id        String        @id @default(uuid())
+  title     String
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  ChatMessage[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model ChatMessage {
+  id        String      @id @default(uuid())
+  role      String      // "user", "assistant"
+  content   String
+  citations String?     // JSON serialized list of source citations
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  name      String
+  key       String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}

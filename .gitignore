@@ -1,0 +1,30 @@
+# Dependency directories
+node_modules/
+server/node_modules/
+web/node_modules/
+
+# Built outputs
+server/dist/
+web/.next/
+web/out/
+
+# Local databases
+server/prisma/*.db
+server/prisma/*.db-journal
+server/dev.db
+server/dev.db-journal
+
+# Environment variables
+.env
+server/.env
+web/.env
+web/.env.local
+web/.env.production
+web/.env.development
+
+# Logs and system files
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
